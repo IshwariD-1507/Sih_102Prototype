@@ -1,1 +1,18 @@
+random_seed: 42
 
+paths:
+  raw: "data/raw"
+  synthetic: "data/synthetic"
+  external: "data/external"
+  interim: "data/interim"
+  processed: "data/processed"
+  models: "models"
+
+thresholds:
+  gps_radius_meters: 500
+  image_similarity_threshold: 0.90
+  progress_discrepancy_threshold: 15
+  financial_physical_gap_threshold: 20
+
+project:
+  demo_projects: 10

@@ -1,1 +1,28 @@
+from pathlib import Path
+import sys
 
+ROOT = Path.cwd().parent
+sys.path.append(str(ROOT))
+
+from src.mplads.data.loaders import load_all_raw_data
+from src.mplads.config import get_path
+
+datasets = load_all_raw_data(get_path("raw"))
+
+print(f"Found {len(datasets)} datasets.")
+
+for name, df in datasets.items():
+    print("\n" + "=" * 70)
+    print(name)
+    print("=" * 70)
+
+    print("Shape:", df.shape)
+
+    print("\nColumns:")
+    print(df.columns.tolist())
+
+    print("\nMissing values:")
+    print(df.isna().sum())
+
+    print("\nFirst 3 rows:")
+    display(df.head(3))

@@ -1,0 +1,24 @@
+weights:
+  financial_anomaly: 20
+  progress_mismatch: 25
+  delay_risk: 20
+  cost_anomaly: 15
+  duplicate_overlap: 10
+  data_quality: 10
+
+bands:
+  low:
+    min: 0
+    max: 30
+
+  elevated:
+    min: 31
+    max: 60
+
+  high:
+    min: 61
+    max: 80
+
+  critical:
+    min: 81
+    max: 100

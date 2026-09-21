@@ -4,104 +4,126 @@ from pathlib import Path
 import pandas as pd
 
 
-# ---------------------------------------------------------
-# Project paths
-# ---------------------------------------------------------
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
-
 SRC_DIR = ROOT_DIR / "src"
 
-sys.path.insert(0, str(SRC_DIR))
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
-# ---------------------------------------------------------
-# Import feature functions
-# ---------------------------------------------------------
-from mplads.models.risk_engine import create_risk_features
-from mplads.features.overlap import create_overlap_features
+from mplads.features.cost import create_cost_features
+from mplads.features.delay_features import create_delay_features
 from mplads.features.evidence import create_evidence_features
 from mplads.features.financial import create_financial_features
-from mplads.features.delay_features import create_delay_features
+from mplads.features.overlap import create_overlap_features
 from mplads.features.progress import create_progress_features
-from mplads.features.cost import create_cost_features
+from mplads.risk.engine import create_risk_features
 
 
-# ---------------------------------------------------------
-# Input / output
-# ---------------------------------------------------------
+PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 
-INPUT_FILE = (
-    ROOT_DIR
-    / "data"
-    / "processed"
-    / "unified_projects.csv"
-)
+INPUT_FILE = PROCESSED_DIR / "unified_projects.csv"
+OUTPUT_FILE = PROCESSED_DIR / "project_features.csv"
+DUPLICATE_FILE = PROCESSED_DIR / "duplicate_candidates.csv"
 
-OUTPUT_FILE = (
-    ROOT_DIR
-    / "data"
-    / "processed"
-    / "project_features.csv"
-)
-DUPLICATE_FILE = (
-    ROOT_DIR
-    / "data"
-    / "processed"
-    / "duplicate_candidates.csv"
-)
+
+def load_duplicate_candidates() -> pd.DataFrame:
+    """
+    Load duplicate candidates if they already exist.
+
+    Duplicate detection is optional at this stage, so the feature
+    pipeline can still run before duplicate_candidates.csv exists.
+    """
+
+    if not DUPLICATE_FILE.exists():
+
+        print(
+            "\nNo duplicate_candidates.csv found."
+        )
+
+        print(
+            "Overlap features will initially be zero."
+        )
+
+        print(
+            "Run duplicate detection later and rerun "
+            "build_features.py to populate overlap signals."
+        )
+
+        return pd.DataFrame()
+
+    try:
+
+        return pd.read_csv(DUPLICATE_FILE)
+
+    except Exception as exc:
+
+        print(
+            f"\nWarning: could not read duplicate candidates: {exc}"
+        )
+
+        return pd.DataFrame()
+
 
 def main():
+
+    if not INPUT_FILE.exists():
+
+        raise FileNotFoundError(
+            "Unified dataset not found.\n\n"
+            "Run:\n"
+            "    python pipelines/build_dataset.py\n\n"
+            f"Expected file:\n{INPUT_FILE}"
+        )
 
     print("\nLoading unified project dataset...\n")
 
     df = pd.read_csv(INPUT_FILE)
-    duplicate_candidates = pd.read_csv(
-    DUPLICATE_FILE
-)
+
+    duplicate_candidates = load_duplicate_candidates()
 
     print("Input shape:", df.shape)
 
-    # -----------------------------------------------------
-    # Financial features
-    # -----------------------------------------------------
+    print(
+        "Duplicate candidates:",
+        len(duplicate_candidates)
+    )
 
     print("\nCreating financial features...")
 
     df = create_financial_features(df)
 
-    # -----------------------------------------------------
-    # Lifecycle / duration features
-    # -----------------------------------------------------
-
     print("Creating lifecycle features...")
 
     df = create_delay_features(df)
 
-    # -----------------------------------------------------
-    # Progress / evidence features
-    # -----------------------------------------------------
-
     print("Creating progress features...")
 
     df = create_progress_features(df)
+
     print("Creating evidence features...")
 
     df = create_evidence_features(df)
+
     print("Creating cost features...")
 
     df = create_cost_features(df)
+
     print("Creating overlap features...")
 
     df = create_overlap_features(
-    df,
-    duplicate_candidates)
+        df,
+        duplicate_candidates
+    )
+
     print("Creating risk features...")
 
     df = create_risk_features(df)
-    # -----------------------------------------------------
-    # Save
-    # -----------------------------------------------------
+
+    PROCESSED_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     df.to_csv(
         OUTPUT_FILE,
@@ -110,46 +132,22 @@ def main():
 
     print("\nFeature dataset created!")
 
-    print(f"Saved to: {OUTPUT_FILE}")
+    print(
+        f"Saved to: {OUTPUT_FILE}"
+    )
 
-    print("\nFinal shape:")
-    print(df.shape)
+    print(
+        "Final shape:",
+        df.shape
+    )
 
-    print("\nNew feature columns:")
+    print("\nRisk category distribution:")
 
-    feature_columns = [
-        "Recommendation_Sanction_Gap",
-        "Recommendation_Sanction_Gap_Percent",
-        "Utilisation_Percent",
-        "Amount_Remaining",
-        "Disbursement_Exceeds_Sanction",
-        "Sanction_Exceeds_Recommendation",
-        "Days_Recommendation_to_Sanction",
-        "Days_Sanction_to_Completion",
-        "Days_Recommendation_to_Completion",
-        "Is_Completed",
-        "Missing_Completion_Data",
-        "Progress_Status",
-        "Has_Completion_Image",
-        "Completion_Evidence_Missing",
-        "Evidence_Risk",
-    "Completed_Without_Evidence",
-        "Cost_Peer_Group",
-    "Peer_Median_Sanction_Amount",
-    "Cost_Deviation_From_Peer_Median",
-    "Cost_Deviation_Percent",
-    "High_Cost_Deviation",
-    "Potential_Overlap_Count",
-"Max_Overlap_Score",
-"Has_Potential_Overlap",
-"Risk_Score",
-"Risk_Category",
-"Risk_Reasons",
-    ]
-
-    for column in feature_columns:
-        if column in df.columns:
-            print(" -", column)
+    print(
+        df["Risk_Category"]
+        .value_counts(dropna=False)
+        .to_string()
+    )
 
     print("\nSample:")
 
@@ -163,10 +161,18 @@ def main():
         "Days_Sanction_to_Completion",
         "Progress_Status",
         "Has_Completion_Image",
+        "Risk_Score",
+        "Risk_Category",
+    ]
+
+    available_columns = [
+        column
+        for column in sample_columns
+        if column in df.columns
     ]
 
     print(
-        df[sample_columns]
+        df[available_columns]
         .head(10)
         .to_string(index=False)
     )

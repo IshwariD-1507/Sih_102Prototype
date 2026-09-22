@@ -1,9 +1,23 @@
+# Core data processing
 pandas
 numpy
 scikit-learn
+
+# Streamlit application
+streamlit
+folium
+streamlit-folium
+
+# Machine Learning / NLP
 sentence-transformers
 torch
 transformers
 sentencepiece
 sacremoses
+
+# AI4Bharat multilingual processing
+ai4bharat-transliteration
 indic-nlp-library
+
+# Configuration
+PyYAML
